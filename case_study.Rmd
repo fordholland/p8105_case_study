@@ -1,0 +1,174 @@
+---
+title: "Case study"
+author: "Ford Holland"
+date: "10/8/2019"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 6,
+  out.width = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+```
+
+
+
+```{r}
+
+data(nyc_airbnb)
+glimpse(nyc_airbnb)
+
+```
+
+
+do ratings have any effect on price, rental volume
+
+```{r}
+
+nyc_airbnb %>% 
+  count(review_scores_location)
+
+# a little relationship between price and reviews (negative)
+nyc_airbnb %>% 
+  ggplot(aes(x = price, y = review_scores_location)) +
+  geom_point() +
+  geom_smooth(stat = "smooth", se = FALSE)
+
+# slight relationship betweem # reviews and review quality
+nyc_airbnb %>% 
+  ggplot(aes(x = number_of_reviews, y = review_scores_location)) +
+  geom_point() +
+  geom_smooth(stat = "smooth", se = FALSE)
+
+
+temp = nyc_airbnb %>% 
+  group_by(neighbourhood) %>% 
+  summarize(mean_review = mean(review_scores_location, na.rm = TRUE),
+            mean_price = mean(price, na.rm = TRUE))
+
+
+temp %>% 
+  ggplot(aes(x = mean_review, y = mean_price))
+
+
+
+nyc_airbnb %>% 
+  mutate(stars = review_scores_location / 2,
+         borough = neighbourhood_group) %>% 
+  group_by(borough, neighbourhood) %>% 
+  summarize(mean_stars = mean(stars, na.rm = TRUE),
+            mean_price = mean(price, na.rm = TRUE)) %>% 
+  ggplot(aes(x = mean_stars, y = mean_price)) +
+    geom_point(aes(color = borough)) +
+    facet_grid(~borough)
+
+
+```
+
+
+```{r}
+
+nyc_airbnb %>% 
+  count(neighbourhood)
+
+```
+
+
+```{r}
+
+nyc_airbnb %>% 
+  mutate(stars = review_scores_location / 2,
+         borough = neighbourhood_group) %>% 
+  # group_by(borough, neighbourhood) %>% 
+  summarize(mean_stars = mean(stars, na.rm = TRUE),
+            mean_price = mean(price, na.rm = TRUE)) %>% 
+  ggplot(aes(x = mean_stars, y = mean_price)) +
+    geom_point(aes(color = borough)) +
+    facet_grid(~borough)
+
+```
+
+
+
+```{r}
+
+nyc_airbnb %>% 
+  ggplot(aes(x = price, y = review_scores_location)) +
+  geom_point() +
+  geom_smooth(stat = "smooth", se = FALSE)
+
+```
+
+
+
+```{r}
+
+nyc_airbnb %>% 
+  mutate(stars = review_scores_location / 2,
+         borough = neighbourhood_group) %>%
+  ggplot(aes(x = lat, y = long)) +
+    geom_point(aes(color = borough, alpha = price))
+
+```
+
+## Using leaflets to make a map
+
+```{r}
+
+nyc_airbnb = nyc_airbnb %>% 
+  mutate(stars = review_scores_location / 2,
+         borough = neighbourhood_group)
+
+pal = colorNumeric(
+  palette = "viridis",
+  domain = nyc_airbnb$stars
+)
+
+
+nyc_airbnb %>% 
+  mutate(stars = review_scores_location / 2,
+         borough = neighbourhood_group,
+         label = str_c("<b>Stars: ", stars, "</b><br>Price: ", price, sep = "")) %>%
+  filter(borough == "Manhattan") %>% #,
+         #price > 2000) %>%
+  sample_n(5000) %>% 
+  leaflet::leaflet() %>% 
+  addTiles() %>% 
+  # addMarkers(~lat, ~long) %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addCircleMarkers(~lat, 
+                   ~long, 
+                   radius = 5,
+                   color = ~pal(stars),
+                   popup = ~label)
+
+
+
+```
+
+
+
+
+
